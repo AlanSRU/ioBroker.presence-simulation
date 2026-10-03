@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/lib/format.ts"],
+  "sourcesContent": ["/**\n * Locale-independent time formatting for logs and info states (the server's locale is not the user's).\n */\n\nconst pad = (n: number): string => String(n).padStart(2, '0');\n\n/**\n * \"18:14:38\" in the server's time zone.\n *\n * @param ms - timestamp\n */\nexport function clock(ms: number): string {\n    const d = new Date(ms);\n    return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;\n}\n\n/**\n * \"2026-09-26 18:14\" in the server's time zone.\n *\n * @param ms - timestamp\n */\nexport function dateTime(ms: number): string {\n    const d = new Date(ms);\n    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;\n}\n"],
+  "mappings": ";;;;;;;;;;;;;;;;;;AAAA;AAAA;AAAA;AAAA;AAAA;AAAA;AAIA,MAAM,MAAM,CAAC,MAAsB,OAAO,CAAC,EAAE,SAAS,GAAG,GAAG;AAOrD,SAAS,MAAM,IAAoB;AACtC,QAAM,IAAI,IAAI,KAAK,EAAE;AACrB,SAAO,GAAG,IAAI,EAAE,SAAS,CAAC,CAAC,IAAI,IAAI,EAAE,WAAW,CAAC,CAAC,IAAI,IAAI,EAAE,WAAW,CAAC,CAAC;AAC7E;AAOO,SAAS,SAAS,IAAoB;AACzC,QAAM,IAAI,IAAI,KAAK,EAAE;AACrB,SAAO,GAAG,EAAE,YAAY,CAAC,IAAI,IAAI,EAAE,SAAS,IAAI,CAAC,CAAC,IAAI,IAAI,EAAE,QAAQ,CAAC,CAAC,IAAI,IAAI,EAAE,SAAS,CAAC,CAAC,IAAI,IAAI,EAAE,WAAW,CAAC,CAAC;AACtH;",
+  "names": []
+}

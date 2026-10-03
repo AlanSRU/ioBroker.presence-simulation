@@ -1,0 +1,21 @@
+{
+    "presence-simulation adapter settings": "Adapterinstellingen voor presence-simulation",
+    "headerReplay": "Afspelen",
+    "historyInstance": "Geschiedenis-instantie",
+    "historyInstance_help": "De geschiedenisadapter die de toestanden hieronder vastlegt (history, influxdb of sql).",
+    "days": "Afspelen vanaf (dagen geleden)",
+    "days_help": "1 tot 28. Een week (7) herhaalt uw normale weekritme.",
+    "jitter": "Willekeurige verschuiving (seconden)",
+    "jitter_help": "Elke wijziging schuift tot zoveel seconden eerder of later, zodat het patroon geen exacte kopie is. 0 tot 1800.",
+    "restore": "Toestanden herstellen wanneer de simulatie stopt",
+    "headerStates": "Te simuleren toestanden",
+    "states_help": "Lampen, stekkers of schakelaars. De geschiedenis-instantie hierboven moet elk ervan vastleggen.",
+    "enabled": "Actief",
+    "id": "Toestand",
+    "name": "Naam (optioneel)",
+    "headerTrigger": "Automatisch starten",
+    "triggerId": "Starten wanneer deze toestand…",
+    "triggerId_help": "Optioneel, bijvoorbeeld een aanwezigheids- of afwezigheidstoestand. Zonder schakelt u presence-simulation.0.active zelf.",
+    "triggerValue": "…deze waarde heeft",
+    "triggerValue_help": "Bijvoorbeeld AWAY of true. De simulatie stopt zodra de toestand iets anders wordt."
+}

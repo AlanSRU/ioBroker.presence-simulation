@@ -1,0 +1,21 @@
+{
+    "presence-simulation adapter settings": "Adapter settings for presence-simulation",
+    "headerReplay": "Replay",
+    "historyInstance": "History instance",
+    "historyInstance_help": "The history adapter that records the states below (history, influxdb or sql).",
+    "days": "Replay from (days ago)",
+    "days_help": "1 to 28. A week (7) repeats your normal weekly routine.",
+    "jitter": "Random offset (seconds)",
+    "jitter_help": "Each change moves up to this many seconds earlier or later, so the pattern is not an exact copy. 0 to 1800.",
+    "restore": "Restore the states when the simulation stops",
+    "headerStates": "States to simulate",
+    "states_help": "Lights, plugs or switches. The history instance above must be recording each of them.",
+    "enabled": "Active",
+    "id": "State",
+    "name": "Name (optional)",
+    "headerTrigger": "Automatic start",
+    "triggerId": "Start when this state…",
+    "triggerId_help": "Optional, for example a presence or away-mode state. Without it, switch presence-simulation.0.active yourself.",
+    "triggerValue": "…has this value",
+    "triggerValue_help": "For example AWAY or true. The simulation stops when the state changes to anything else."
+}

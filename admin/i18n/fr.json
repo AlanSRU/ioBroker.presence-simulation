@@ -1,0 +1,21 @@
+{
+    "presence-simulation adapter settings": "Paramètres de l'adaptateur presence-simulation",
+    "headerReplay": "Relecture",
+    "historyInstance": "Instance d'historique",
+    "historyInstance_help": "L'adaptateur d'historique qui enregistre les états ci-dessous (history, influxdb ou sql).",
+    "days": "Rejouer à partir de (jours)",
+    "days_help": "De 1 à 28. Une semaine (7) reproduit votre routine hebdomadaire habituelle.",
+    "jitter": "Décalage aléatoire (secondes)",
+    "jitter_help": "Chaque changement est avancé ou retardé d'au plus ce nombre de secondes, pour que le schéma ne soit pas une copie exacte. De 0 à 1800.",
+    "restore": "Restaurer les états à l'arrêt de la simulation",
+    "headerStates": "États à simuler",
+    "states_help": "Lumières, prises ou interrupteurs. L'instance d'historique ci-dessus doit enregistrer chacun d'eux.",
+    "enabled": "Actif",
+    "id": "État",
+    "name": "Nom (facultatif)",
+    "headerTrigger": "Démarrage automatique",
+    "triggerId": "Démarrer quand cet état…",
+    "triggerId_help": "Facultatif, par exemple un état de présence ou de mode absence. Sans lui, basculez presence-simulation.0.active vous-même.",
+    "triggerValue": "…a cette valeur",
+    "triggerValue_help": "Par exemple AWAY ou true. La simulation s'arrête dès que l'état prend une autre valeur."
+}

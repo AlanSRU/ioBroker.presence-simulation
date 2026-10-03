@@ -1,0 +1,21 @@
+{
+    "presence-simulation adapter settings": "Adaptereinstellungen für presence-simulation",
+    "headerReplay": "Wiedergabe",
+    "historyInstance": "History-Instanz",
+    "historyInstance_help": "Der History-Adapter, der die Zustände unten aufzeichnet (history, influxdb oder sql).",
+    "days": "Wiedergabe von (Tage zurück)",
+    "days_help": "1 bis 28. Eine Woche (7) wiederholt Ihren normalen Wochenablauf.",
+    "jitter": "Zufälliger Versatz (Sekunden)",
+    "jitter_help": "Jede Änderung wird um bis zu so viele Sekunden früher oder später ausgeführt, damit das Muster keine exakte Kopie ist. 0 bis 1800.",
+    "restore": "Zustände wiederherstellen, wenn die Simulation endet",
+    "headerStates": "Zu simulierende Zustände",
+    "states_help": "Lichter, Steckdosen oder Schalter. Die History-Instanz oben muss jeden davon aufzeichnen.",
+    "enabled": "Aktiv",
+    "id": "Zustand",
+    "name": "Name (optional)",
+    "headerTrigger": "Automatischer Start",
+    "triggerId": "Starten, wenn dieser Zustand…",
+    "triggerId_help": "Optional, zum Beispiel ein Anwesenheits- oder Abwesenheitszustand. Ohne ihn schalten Sie presence-simulation.0.active selbst.",
+    "triggerValue": "…diesen Wert hat",
+    "triggerValue_help": "Zum Beispiel AWAY oder true. Die Simulation endet, sobald der Zustand einen anderen Wert annimmt."
+}

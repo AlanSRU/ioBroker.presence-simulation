@@ -1,0 +1,21 @@
+{
+    "presence-simulation adapter settings": "presence-simulation 适配器设置",
+    "headerReplay": "重放",
+    "historyInstance": "历史记录实例",
+    "historyInstance_help": "记录下方状态的历史适配器（history、influxdb 或 sql）。",
+    "days": "重放（几天前）",
+    "days_help": "1 到 28。一周（7）会重复您平常的每周作息。",
+    "jitter": "随机偏移（秒）",
+    "jitter_help": "每次变化会提前或推迟最多这么多秒，使模式不完全重复。0 到 1800。",
+    "restore": "模拟停止时恢复状态",
+    "headerStates": "要模拟的状态",
+    "states_help": "灯、插座或开关。上方的历史记录实例必须记录其中每一个。",
+    "enabled": "启用",
+    "id": "状态",
+    "name": "名称（可选）",
+    "headerTrigger": "自动启动",
+    "triggerId": "当此状态…时启动",
+    "triggerId_help": "可选，例如在家或离家模式状态。不设置时，请自行切换 presence-simulation.0.active。",
+    "triggerValue": "…为此值",
+    "triggerValue_help": "例如 AWAY 或 true。当状态变为其他任何值时，模拟停止。"
+}

@@ -1,0 +1,98 @@
+{
+    "common": {
+        "name": "presence-simulation",
+        "version": "0.0.1",
+        "news": {
+            "0.0.1": {
+                "en": "initial release",
+                "de": "Erstveröffentlichung",
+                "ru": "первый выпуск",
+                "pt": "lançamento inicial",
+                "nl": "eerste release",
+                "fr": "version initiale",
+                "it": "versione iniziale",
+                "es": "versión inicial",
+                "pl": "pierwsze wydanie",
+                "uk": "перший випуск",
+                "zh-cn": "首次发布"
+            }
+        },
+        "titleLang": {
+            "en": "Presence Simulation",
+            "de": "Anwesenheitssimulation",
+            "ru": "Моделирование присутствия",
+            "pt": "Simulação de Presença",
+            "nl": "Aanwezigheidssimulatie",
+            "fr": "Simulation de présence",
+            "it": "Simulazione della presenza",
+            "es": "Simulación de presencia",
+            "pl": "Symulacja obecności",
+            "uk": "Симуляція присутності",
+            "zh-cn": "存在模拟"
+        },
+        "desc": {
+            "en": "Makes the house look lived-in while you are away by replaying how your lights and switches were used a week earlier, with a random offset.",
+            "de": "Lässt das Haus bewohnt wirken, während Sie unterwegs sind, indem sie die Nutzung Ihrer Lichter und Schalter von vor einer Woche mit zufälligem Versatz wiederholt.",
+            "ru": "Создаёт видимость присутствия во время вашего отсутствия, повторяя использование света и выключателей неделей ранее со случайным сдвигом.",
+            "pt": "Faz a casa parecer habitada enquanto está fora, repetindo como as luzes e interruptores foram usados uma semana antes, com um desvio aleatório.",
+            "nl": "Laat het huis bewoond lijken terwijl u weg bent door het gebruik van uw lampen en schakelaars van een week eerder te herhalen, met een willekeurige verschuiving.",
+            "fr": "Donne l'impression que la maison est habitée pendant votre absence en rejouant l'utilisation de vos lumières et interrupteurs une semaine plus tôt, avec un décalage aléatoire.",
+            "it": "Fa sembrare la casa abitata mentre sei via, ripetendo l'uso di luci e interruttori di una settimana prima, con uno scostamento casuale.",
+            "es": "Hace que la casa parezca habitada mientras está fuera, repitiendo cómo se usaron las luces e interruptores una semana antes, con un desfase aleatorio.",
+            "pl": "Sprawia, że dom wygląda na zamieszkany podczas Twojej nieobecności, odtwarzając użycie świateł i przełączników sprzed tygodnia z losowym przesunięciem.",
+            "uk": "Створює враження присутності, поки вас немає, повторюючи використання світла й вимикачів тижнем раніше з випадковим зсувом.",
+            "zh-cn": "在您外出时，通过以随机偏移重放一周前灯光和开关的使用情况，让房屋看起来有人居住。"
+        },
+        "authors": [
+            "Alan Paris <alan.paris@scottish.rugby>"
+        ],
+        "keywords": [
+            "presence",
+            "simulation",
+            "away",
+            "holiday",
+            "lights",
+            "security"
+        ],
+        "licenseInformation": {
+            "type": "free",
+            "license": "MIT"
+        },
+        "platform": "Javascript/Node.js",
+        "icon": "presence-simulation.png",
+        "enabled": true,
+        "extIcon": "https://raw.githubusercontent.com/AlanSRU/ioBroker.presence-simulation/main/admin/presence-simulation.png",
+        "readme": "https://github.com/AlanSRU/ioBroker.presence-simulation/blob/main/README.md",
+        "loglevel": "info",
+        "tier": 3,
+        "mode": "daemon",
+        "type": "logic",
+        "compact": true,
+        "connectionType": "local",
+        "dataSource": "push",
+        "adminUI": {
+            "config": "json"
+        },
+        "dependencies": [
+            {
+                "js-controller": ">=6.0.11"
+            }
+        ],
+        "globalDependencies": [
+            {
+                "admin": ">=7.6.20"
+            }
+        ]
+    },
+    "native": {
+        "states": [],
+        "historyInstance": "history.0",
+        "days": 7,
+        "jitter": 300,
+        "restore": true,
+        "triggerId": "",
+        "triggerValue": ""
+    },
+    "objects": [],
+    "instanceObjects": []
+}

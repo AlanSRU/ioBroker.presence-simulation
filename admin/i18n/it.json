@@ -1,0 +1,21 @@
+{
+    "presence-simulation adapter settings": "Impostazioni dell'adattatore presence-simulation",
+    "headerReplay": "Riproduzione",
+    "historyInstance": "Istanza della cronologia",
+    "historyInstance_help": "L'adattatore di cronologia che registra gli stati qui sotto (history, influxdb o sql).",
+    "days": "Riproduci da (giorni fa)",
+    "days_help": "Da 1 a 28. Una settimana (7) ripete la tua normale routine settimanale.",
+    "jitter": "Scostamento casuale (secondi)",
+    "jitter_help": "Ogni modifica viene anticipata o ritardata fino a questi secondi, così lo schema non è una copia esatta. Da 0 a 1800.",
+    "restore": "Ripristina gli stati quando la simulazione si ferma",
+    "headerStates": "Stati da simulare",
+    "states_help": "Luci, prese o interruttori. L'istanza di cronologia sopra deve registrare ciascuno di essi.",
+    "enabled": "Attivo",
+    "id": "Stato",
+    "name": "Nome (facoltativo)",
+    "headerTrigger": "Avvio automatico",
+    "triggerId": "Avvia quando questo stato…",
+    "triggerId_help": "Facoltativo, ad esempio uno stato di presenza o modalità assente. Senza di esso, attiva tu stesso presence-simulation.0.active.",
+    "triggerValue": "…ha questo valore",
+    "triggerValue_help": "Ad esempio AWAY o true. La simulazione si ferma quando lo stato assume qualsiasi altro valore."
+}

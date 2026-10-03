@@ -1,0 +1,21 @@
+{
+    "presence-simulation adapter settings": "Ustawienia adaptera presence-simulation",
+    "headerReplay": "Odtwarzanie",
+    "historyInstance": "Instancja historii",
+    "historyInstance_help": "Adapter historii, który zapisuje poniższe stany (history, influxdb lub sql).",
+    "days": "Odtwarzaj sprzed (dni)",
+    "days_help": "Od 1 do 28. Tydzień (7) powtarza zwykły tygodniowy rytm.",
+    "jitter": "Losowe przesunięcie (sekundy)",
+    "jitter_help": "Każda zmiana przesuwa się o maksymalnie tyle sekund wcześniej lub później, by wzorzec nie był dokładną kopią. Od 0 do 1800.",
+    "restore": "Przywróć stany po zatrzymaniu symulacji",
+    "headerStates": "Stany do symulacji",
+    "states_help": "Światła, gniazdka lub przełączniki. Powyższa instancja historii musi rejestrować każdy z nich.",
+    "enabled": "Aktywny",
+    "id": "Stan",
+    "name": "Nazwa (opcjonalnie)",
+    "headerTrigger": "Automatyczny start",
+    "triggerId": "Uruchom, gdy ten stan…",
+    "triggerId_help": "Opcjonalnie, np. stan obecności lub trybu nieobecności. Bez niego przełączaj presence-simulation.0.active samodzielnie.",
+    "triggerValue": "…ma tę wartość",
+    "triggerValue_help": "Na przykład AWAY lub true. Symulacja zatrzymuje się, gdy stan zmieni się na cokolwiek innego."
+}

@@ -1,0 +1,49 @@
+{
+    "cli": true,
+    "target": "directory",
+    "adapterName": "presence-simulation",
+    "title": "Presence Simulation",
+    "description": "Makes the house look lived-in while you are away by replaying how your lights and switches were used a week earlier, with a random offset.",
+    "keywords": [
+        "presence",
+        "simulation",
+        "away",
+        "holiday",
+        "lights",
+        "security"
+    ],
+    "contributors": [],
+    "expert": "yes",
+    "features": [
+        "adapter"
+    ],
+    "adminFeatures": [],
+    "type": "logic",
+    "startMode": "daemon",
+    "connectionType": "local",
+    "dataSource": "push",
+    "connectionIndicator": "no",
+    "language": "TypeScript",
+    "nodeVersion": "20",
+    "adminUi": "json",
+    "tools": [
+        "ESLint",
+        "type checking",
+        "Prettier"
+    ],
+    "eslintConfig": "official",
+    "i18n": "JSON",
+    "releaseScript": "yes",
+    "devServer": "no",
+    "indentation": "Space (4)",
+    "quotes": "single",
+    "gitRemoteProtocol": "HTTPS",
+    "gitCommit": "no",
+    "defaultBranch": "main",
+    "authorName": "Alan Paris",
+    "authorEmail": "alan.paris@scottish.rugby",
+    "authorGithub": "AlanSRU",
+    "license": "MIT License",
+    "dependabot": "no",
+    "creatorVersion": "3.1.5"
+}
