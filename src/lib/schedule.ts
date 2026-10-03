@@ -33,6 +33,11 @@ export interface PlanOptions {
     now: number;
     /** Only plan actions at or after this time; anything earlier is clamped to it. */
     notBefore?: number;
+    /**
+     * When the previous action for this state (from an earlier window) is scheduled, so a change
+     * near a window edge can never be pulled before it.
+     */
+    after?: number;
     /** Random source returning [0, 1). Injected for tests. */
     random?: () => number;
 }
@@ -72,7 +77,8 @@ export function valueAt(entries: HistoryEntry[], t: number): ioBroker.StateValue
  * Every entry with `windowStart < ts <= windowEnd` (recorded time) becomes an action at
  * `ts + deltaMs ± jitter`. Consecutive repeats of the same value are dropped, since they would
  * not change anything. Per state, actions keep their recorded order and are at least
- * MIN_GAP_MS apart, so a random shift can never put "off" before the "on" it follows.
+ * MIN_GAP_MS apart, so a random shift can never put "off" before the "on" it follows. Pass the
+ * previous window's last action time as `after` to keep that guarantee across windows.
  *
  * @param id - state id the entries belong to
  * @param entries - history entries of that state, in any order
@@ -97,7 +103,7 @@ export function planWindow(
 
     const actions: PlannedAction[] = [];
     let previousVal = lastValue;
-    let previousAt = -Infinity;
+    let previousAt = opts.after ?? -Infinity;
     for (const e of sorted) {
         if (e.val === previousVal) {
             continue;

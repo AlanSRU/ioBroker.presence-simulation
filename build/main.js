@@ -40,6 +40,12 @@ class PresenceSimulation extends utils.Adapter {
   /** The value each state is currently replaying (to drop repeats across windows). */
   replaying = /* @__PURE__ */ new Map();
   pending = [];
+  /** When the last action of each state is scheduled, so the next window keeps the order. */
+  lastAt = /* @__PURE__ */ new Map();
+  /** Whether the trigger state currently means "away" (undefined until first read). */
+  triggerAway;
+  /** Set while the history instance cannot be read, so the failure is logged once. */
+  historyFailing = false;
   constructor(options = {}) {
     super({ ...options, name: "presence-simulation" });
     this.on("ready", this.onReady.bind(this));
@@ -47,6 +53,7 @@ class PresenceSimulation extends utils.Adapter {
     this.on("unload", this.onUnload.bind(this));
   }
   async onReady() {
+    var _a;
     this.settings = (0, import_config.readSettings)(this.config);
     await this.createObjects();
     if (this.unloaded) {
@@ -64,20 +71,35 @@ class PresenceSimulation extends utils.Adapter {
       return;
     }
     await this.checkHistoryLogging();
+    if (this.settings.triggerId) {
+      if (!this.settings.triggerValue) {
+        this.log.warn("A start state is set but no value for it: the simulation will not start automatically.");
+      }
+      this.subscribeForeignStates(this.settings.triggerId);
+      const trig = await this.getForeignStateAsync(this.settings.triggerId);
+      this.triggerAway = (0, import_config.matchesTrigger)(trig == null ? void 0 : trig.val, this.settings.triggerValue);
+    }
+    if (this.unloaded) {
+      return;
+    }
     const active = await this.getStateAsync("active");
     if ((active == null ? void 0 : active.val) === true) {
-      this.log.info("Simulation was active before the restart: resuming");
-      await this.startSimulation(true);
+      const startedBy = (_a = await this.getStateAsync("info.startedBy")) == null ? void 0 : _a.val;
+      if (startedBy === "trigger" && this.settings.triggerId && !this.triggerAway) {
+        this.log.info(
+          `${this.settings.triggerId} no longer means away: stopping the simulation started before the restart`
+        );
+        await this.stopSimulation("home again while stopped");
+      } else {
+        this.log.info("Simulation was active before the restart: resuming");
+        await this.startSimulation(true, startedBy === "trigger" ? "trigger" : "manual");
+      }
     } else {
       await this.setStatus("Idle");
     }
-    if (this.settings.triggerId) {
-      this.subscribeForeignStates(this.settings.triggerId);
-      const trig = await this.getForeignStateAsync(this.settings.triggerId);
-      if (!this.running && trig && (0, import_config.matchesTrigger)(trig.val, this.settings.triggerValue)) {
-        this.log.info(`${this.settings.triggerId} is "${String(trig.val)}": starting the simulation`);
-        await this.startSimulation(false);
-      }
+    if (!this.running && this.triggerAway) {
+      this.log.info(`${this.settings.triggerId} means away: starting the simulation`);
+      await this.startSimulation(false, "trigger");
     }
   }
   /** Creates or updates the adapter's own objects (extendObject keeps metadata current on upgrades). */
@@ -204,6 +226,26 @@ class PresenceSimulation extends utils.Adapter {
       },
       native: {}
     });
+    await this.extendObject("info.startedBy", {
+      type: "state",
+      common: {
+        ...text(
+          "Started by (trigger or manual)",
+          "Gestartet durch (Ausl\xF6ser oder manuell)",
+          "\u0417\u0430\u043F\u0443\u0449\u0435\u043D\u043E (\u0442\u0440\u0438\u0433\u0433\u0435\u0440\u043E\u043C \u0438\u043B\u0438 \u0432\u0440\u0443\u0447\u043D\u0443\u044E)",
+          "Iniciado por (gatilho ou manual)",
+          "Gestart door (trigger of handmatig)",
+          "D\xE9marr\xE9 par (d\xE9clencheur ou manuel)",
+          "Avviato da (trigger o manuale)",
+          "Iniciado por (disparador o manual)",
+          "Uruchomione przez (wyzwalacz lub r\u0119cznie)",
+          "\u0417\u0430\u043F\u0443\u0449\u0435\u043D\u043E (\u0442\u0440\u0438\u0433\u0435\u0440\u043E\u043C \u0430\u0431\u043E \u0432\u0440\u0443\u0447\u043D\u0443)",
+          "\u542F\u52A8\u65B9\u5F0F\uFF08\u89E6\u53D1\u5668\u6216\u624B\u52A8\uFF09"
+        ),
+        states: { trigger: "trigger", manual: "manual" }
+      },
+      native: {}
+    });
   }
   async onStateChange(id, state) {
     if (!state || this.unloaded) {
@@ -214,7 +256,11 @@ class PresenceSimulation extends utils.Adapter {
         return;
       }
       if (state.val === true) {
-        await this.startSimulation(false);
+        if (this.running) {
+          await this.setState("active", true, true);
+        } else {
+          await this.startSimulation(false, "manual");
+        }
       } else {
         await this.stopSimulation("switched off");
       }
@@ -222,9 +268,13 @@ class PresenceSimulation extends utils.Adapter {
     }
     if (id === this.settings.triggerId && state.ack) {
       const away = (0, import_config.matchesTrigger)(state.val, this.settings.triggerValue);
+      if (away === this.triggerAway) {
+        return;
+      }
+      this.triggerAway = away;
       if (away && !this.running) {
         this.log.info(`${id} changed to "${String(state.val)}": starting the simulation`);
-        await this.startSimulation(false);
+        await this.startSimulation(false, "trigger");
       } else if (!away && this.running) {
         this.log.info(`${id} changed to "${String(state.val)}": stopping the simulation`);
         await this.stopSimulation("trigger");
@@ -235,8 +285,9 @@ class PresenceSimulation extends utils.Adapter {
    * Starts (or resumes) the replay.
    *
    * @param resume - true after an adapter restart: keep the states saved at the original start
+   * @param by - what started it; a trigger-started run is stopped on resume if the trigger no longer means away
    */
-  async startSimulation(resume) {
+  async startSimulation(resume, by) {
     if (this.running || this.unloaded) {
       return;
     }
@@ -246,6 +297,7 @@ class PresenceSimulation extends utils.Adapter {
     }
     this.running = true;
     await this.setState("active", true, true);
+    await this.setState("info.startedBy", by, true);
     const saved = await this.getStateAsync("info.savedStates");
     if (!resume || !(saved == null ? void 0 : saved.val)) {
       const snapshot = {};
@@ -255,6 +307,9 @@ class PresenceSimulation extends utils.Adapter {
           snapshot[s.id] = st.val;
         }
       }
+      if (this.unloaded || !this.running) {
+        return;
+      }
       await this.setState("info.savedStates", JSON.stringify(snapshot), true);
     }
     if (this.unloaded || !this.running) {
@@ -262,11 +317,13 @@ class PresenceSimulation extends utils.Adapter {
     }
     const recordedNow = Date.now() - this.settings.deltaMs;
     this.replaying.clear();
+    this.lastAt.clear();
     for (const s of this.settings.states) {
       const before = await this.history(s.id, { end: recordedNow, count: 1, returnNewestEntries: true });
       const val = (0, import_schedule.valueAt)(before, recordedNow);
-      if (val !== void 0) {
+      if (val !== void 0 && this.running) {
         this.replaying.set(s.id, val);
+        this.lastAt.set(s.id, Date.now());
         await this.write(s.id, val, "initial state");
       }
       if (this.unloaded || !this.running) {
@@ -296,7 +353,8 @@ class PresenceSimulation extends utils.Adapter {
         let actions = (0, import_schedule.planWindow)(s.id, entries, windowStart, windowEnd, this.replaying.get(s.id), {
           deltaMs: this.settings.deltaMs,
           jitterMs: this.settings.jitterMs,
-          now
+          now,
+          after: this.lastAt.get(s.id)
         });
         if (actions.length > MAX_ACTIONS_PER_WINDOW) {
           this.log.warn(
@@ -305,7 +363,9 @@ class PresenceSimulation extends utils.Adapter {
           actions = actions.slice(0, MAX_ACTIONS_PER_WINDOW);
         }
         if (actions.length) {
-          this.replaying.set(s.id, actions[actions.length - 1].val);
+          const last = actions[actions.length - 1];
+          this.replaying.set(s.id, last.val);
+          this.lastAt.set(s.id, last.at);
         }
         for (const a of actions) {
           this.schedule(a);
@@ -354,7 +414,7 @@ class PresenceSimulation extends utils.Adapter {
           const snapshot = JSON.parse(saved.val);
           for (const [id, val] of Object.entries(snapshot)) {
             if (this.settings.states.some((s) => s.id === id)) {
-              await this.write(id, val, "restored");
+              await this.write(id, val, "restored", false);
             }
           }
         } catch {
@@ -364,6 +424,7 @@ class PresenceSimulation extends utils.Adapter {
       this.log.info(`Simulation stopped (${reason})`);
     }
     await this.setState("info.savedStates", "", true);
+    await this.setState("info.startedBy", "", true);
     await this.setState("info.nextAction", "", true);
     await this.setState("active", false, true);
     await this.setStatus("Idle");
@@ -374,10 +435,11 @@ class PresenceSimulation extends utils.Adapter {
    * @param id - state id
    * @param val - value to write
    * @param why - for the log and info.lastAction
+   * @param onlyWhileRunning - false for restoring after a stop
    */
-  async write(id, val, why) {
+  async write(id, val, why, onlyWhileRunning = true) {
     var _a, _b;
-    if (this.unloaded) {
+    if (this.unloaded || onlyWhileRunning && !this.running) {
       return;
     }
     try {
@@ -409,15 +471,32 @@ class PresenceSimulation extends utils.Adapter {
         { timeout: HISTORY_TIMEOUT_MS }
       );
       if (res == null ? void 0 : res.error) {
-        this.log.warn(`History for ${id} could not be read: ${res.error}`);
+        this.historyProblem(`History for ${id} could not be read: ${res.error}`);
         return [];
+      }
+      if (this.historyFailing) {
+        this.historyFailing = false;
+        this.log.info(`${this.settings.historyInstance} can be read again`);
       }
       return ((_a = res == null ? void 0 : res.result) != null ? _a : []).filter((e) => typeof (e == null ? void 0 : e.ts) === "number" && (0, import_schedule.isReplayable)(e.val)).map((e) => ({ ts: e.ts, val: e.val }));
     } catch (e) {
-      this.log.warn(
+      this.historyProblem(
         `History for ${id} could not be read from ${this.settings.historyInstance}: ${e.message}`
       );
       return [];
+    }
+  }
+  /**
+   * Logs a history read failure once; repeats go to debug until a read succeeds again.
+   *
+   * @param text - the message
+   */
+  historyProblem(text) {
+    if (this.historyFailing) {
+      this.log.debug(text);
+    } else {
+      this.historyFailing = true;
+      this.log.warn(text);
     }
   }
   /** Warns about selected states that the chosen history instance is not recording. */
@@ -462,6 +541,7 @@ class PresenceSimulation extends utils.Adapter {
     }
     this.timers.clear();
     this.pending = [];
+    this.lastAt.clear();
     if (this.refillTimer) {
       this.clearTimeout(this.refillTimer);
       this.refillTimer = void 0;

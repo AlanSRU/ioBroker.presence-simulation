@@ -1,5 +1,4 @@
 {
-    "presence-simulation adapter settings": "Impostazioni dell'adattatore presence-simulation",
     "headerReplay": "Riproduzione",
     "historyInstance": "Istanza della cronologia",
     "historyInstance_help": "L'adattatore di cronologia che registra gli stati qui sotto (history, influxdb o sql).",

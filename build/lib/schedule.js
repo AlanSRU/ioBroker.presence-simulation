@@ -38,13 +38,13 @@ function valueAt(entries, t) {
   return best == null ? void 0 : best.val;
 }
 function planWindow(id, entries, windowStart, windowEnd, lastValue, opts) {
-  var _a, _b;
+  var _a, _b, _c;
   const random = (_a = opts.random) != null ? _a : Math.random;
   const notBefore = (_b = opts.notBefore) != null ? _b : opts.now;
   const sorted = entries.filter((e) => e.ts > windowStart && e.ts <= windowEnd && isReplayable(e.val)).sort((a, b) => a.ts - b.ts);
   const actions = [];
   let previousVal = lastValue;
-  let previousAt = -Infinity;
+  let previousAt = (_c = opts.after) != null ? _c : -Infinity;
   for (const e of sorted) {
     if (e.val === previousVal) {
       continue;

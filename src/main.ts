@@ -28,6 +28,12 @@ class PresenceSimulation extends utils.Adapter {
     /** The value each state is currently replaying (to drop repeats across windows). */
     private replaying = new Map<string, ioBroker.StateValue>();
     private pending: PlannedAction[] = [];
+    /** When the last action of each state is scheduled, so the next window keeps the order. */
+    private lastAt = new Map<string, number>();
+    /** Whether the trigger state currently means "away" (undefined until first read). */
+    private triggerAway: boolean | undefined;
+    /** Set while the history instance cannot be read, so the failure is logged once. */
+    private historyFailing = false;
 
     public constructor(options: Partial<utils.AdapterOptions> = {}) {
         super({ ...options, name: 'presence-simulation' });
@@ -56,21 +62,38 @@ class PresenceSimulation extends utils.Adapter {
         }
         await this.checkHistoryLogging();
 
+        if (this.settings.triggerId) {
+            if (!this.settings.triggerValue) {
+                this.log.warn('A start state is set but no value for it: the simulation will not start automatically.');
+            }
+            this.subscribeForeignStates(this.settings.triggerId);
+            const trig = await this.getForeignStateAsync(this.settings.triggerId);
+            this.triggerAway = matchesTrigger(trig?.val, this.settings.triggerValue);
+        }
+        if (this.unloaded) {
+            return;
+        }
+
         const active = await this.getStateAsync('active');
         if (active?.val === true) {
-            this.log.info('Simulation was active before the restart: resuming');
-            await this.startSimulation(true);
+            const startedBy = (await this.getStateAsync('info.startedBy'))?.val;
+            if (startedBy === 'trigger' && this.settings.triggerId && !this.triggerAway) {
+                // Home again while ioBroker was down: no change event will come, so stop and restore now.
+                this.log.info(
+                    `${this.settings.triggerId} no longer means away: stopping the simulation started before the restart`,
+                );
+                await this.stopSimulation('home again while stopped');
+            } else {
+                this.log.info('Simulation was active before the restart: resuming');
+                await this.startSimulation(true, startedBy === 'trigger' ? 'trigger' : 'manual');
+            }
         } else {
             await this.setStatus('Idle');
         }
 
-        if (this.settings.triggerId) {
-            this.subscribeForeignStates(this.settings.triggerId);
-            const trig = await this.getForeignStateAsync(this.settings.triggerId);
-            if (!this.running && trig && matchesTrigger(trig.val, this.settings.triggerValue)) {
-                this.log.info(`${this.settings.triggerId} is "${String(trig.val)}": starting the simulation`);
-                await this.startSimulation(false);
-            }
+        if (!this.running && this.triggerAway) {
+            this.log.info(`${this.settings.triggerId} means away: starting the simulation`);
+            await this.startSimulation(false, 'trigger');
         }
     }
 
@@ -210,6 +233,26 @@ class PresenceSimulation extends utils.Adapter {
             },
             native: {},
         });
+        await this.extendObject('info.startedBy', {
+            type: 'state',
+            common: {
+                ...text(
+                    'Started by (trigger or manual)',
+                    'Gestartet durch (Auslöser oder manuell)',
+                    'Запущено (триггером или вручную)',
+                    'Iniciado por (gatilho ou manual)',
+                    'Gestart door (trigger of handmatig)',
+                    'Démarré par (déclencheur ou manuel)',
+                    'Avviato da (trigger o manuale)',
+                    'Iniciado por (disparador o manual)',
+                    'Uruchomione przez (wyzwalacz lub ręcznie)',
+                    'Запущено (тригером або вручну)',
+                    '启动方式（触发器或手动）',
+                ),
+                states: { trigger: 'trigger', manual: 'manual' },
+            },
+            native: {},
+        });
     }
 
     private async onStateChange(id: string, state: ioBroker.State | null | undefined): Promise<void> {
@@ -222,18 +265,28 @@ class PresenceSimulation extends utils.Adapter {
                 return;
             }
             if (state.val === true) {
-                await this.startSimulation(false);
+                if (this.running) {
+                    await this.setState('active', true, true); // already running: just confirm
+                } else {
+                    await this.startSimulation(false, 'manual');
+                }
             } else {
                 await this.stopSimulation('switched off');
             }
             return;
         }
-        // Foreign trigger: act on confirmed values (ack true) only.
+        // Foreign trigger: act on confirmed values (ack true) only, and only when away/home actually
+        // changes. Adapters re-write unchanged values on every poll; acting on those would restart a
+        // simulation the user has just switched off.
         if (id === this.settings.triggerId && state.ack) {
             const away = matchesTrigger(state.val, this.settings.triggerValue);
+            if (away === this.triggerAway) {
+                return;
+            }
+            this.triggerAway = away;
             if (away && !this.running) {
                 this.log.info(`${id} changed to "${String(state.val)}": starting the simulation`);
-                await this.startSimulation(false);
+                await this.startSimulation(false, 'trigger');
             } else if (!away && this.running) {
                 this.log.info(`${id} changed to "${String(state.val)}": stopping the simulation`);
                 await this.stopSimulation('trigger');
@@ -245,8 +298,9 @@ class PresenceSimulation extends utils.Adapter {
      * Starts (or resumes) the replay.
      *
      * @param resume - true after an adapter restart: keep the states saved at the original start
+     * @param by - what started it; a trigger-started run is stopped on resume if the trigger no longer means away
      */
-    private async startSimulation(resume: boolean): Promise<void> {
+    private async startSimulation(resume: boolean, by: 'trigger' | 'manual'): Promise<void> {
         if (this.running || this.unloaded) {
             return;
         }
@@ -256,6 +310,7 @@ class PresenceSimulation extends utils.Adapter {
         }
         this.running = true;
         await this.setState('active', true, true);
+        await this.setState('info.startedBy', by, true);
 
         const saved = await this.getStateAsync('info.savedStates');
         if (!resume || !saved?.val) {
@@ -266,6 +321,10 @@ class PresenceSimulation extends utils.Adapter {
                     snapshot[s.id] = st.val;
                 }
             }
+            // A stop during the reads above must not leave a stale snapshot behind for a later restore.
+            if (this.unloaded || !this.running) {
+                return;
+            }
             await this.setState('info.savedStates', JSON.stringify(snapshot), true);
         }
         if (this.unloaded || !this.running) {
@@ -275,11 +334,13 @@ class PresenceSimulation extends utils.Adapter {
         // Put every state where it was at the same moment `days` ago, then plan ahead.
         const recordedNow = Date.now() - this.settings.deltaMs;
         this.replaying.clear();
+        this.lastAt.clear();
         for (const s of this.settings.states) {
             const before = await this.history(s.id, { end: recordedNow, count: 1, returnNewestEntries: true });
             const val = valueAt(before, recordedNow);
-            if (val !== undefined) {
+            if (val !== undefined && this.running) {
                 this.replaying.set(s.id, val);
+                this.lastAt.set(s.id, Date.now());
                 await this.write(s.id, val, 'initial state');
             }
             if (this.unloaded || !this.running) {
@@ -311,6 +372,7 @@ class PresenceSimulation extends utils.Adapter {
                     deltaMs: this.settings.deltaMs,
                     jitterMs: this.settings.jitterMs,
                     now,
+                    after: this.lastAt.get(s.id),
                 });
                 if (actions.length > MAX_ACTIONS_PER_WINDOW) {
                     this.log.warn(
@@ -319,7 +381,9 @@ class PresenceSimulation extends utils.Adapter {
                     actions = actions.slice(0, MAX_ACTIONS_PER_WINDOW);
                 }
                 if (actions.length) {
-                    this.replaying.set(s.id, actions[actions.length - 1].val);
+                    const last = actions[actions.length - 1];
+                    this.replaying.set(s.id, last.val);
+                    this.lastAt.set(s.id, last.at);
                 }
                 for (const a of actions) {
                     this.schedule(a);
@@ -371,7 +435,7 @@ class PresenceSimulation extends utils.Adapter {
                     const snapshot = JSON.parse(saved.val) as Record<string, ioBroker.StateValue>;
                     for (const [id, val] of Object.entries(snapshot)) {
                         if (this.settings.states.some(s => s.id === id)) {
-                            await this.write(id, val, 'restored');
+                            await this.write(id, val, 'restored', false);
                         }
                     }
                 } catch {
@@ -381,6 +445,7 @@ class PresenceSimulation extends utils.Adapter {
             this.log.info(`Simulation stopped (${reason})`);
         }
         await this.setState('info.savedStates', '', true);
+        await this.setState('info.startedBy', '', true);
         await this.setState('info.nextAction', '', true);
         await this.setState('active', false, true);
         await this.setStatus('Idle');
@@ -392,9 +457,10 @@ class PresenceSimulation extends utils.Adapter {
      * @param id - state id
      * @param val - value to write
      * @param why - for the log and info.lastAction
+     * @param onlyWhileRunning - false for restoring after a stop
      */
-    private async write(id: string, val: ioBroker.StateValue, why: string): Promise<void> {
-        if (this.unloaded) {
+    private async write(id: string, val: ioBroker.StateValue, why: string, onlyWhileRunning = true): Promise<void> {
+        if (this.unloaded || (onlyWhileRunning && !this.running)) {
             return;
         }
         try {
@@ -426,17 +492,35 @@ class PresenceSimulation extends utils.Adapter {
                 { timeout: HISTORY_TIMEOUT_MS },
             )) as { result?: { ts: number; val: unknown }[]; error?: string } | undefined;
             if (res?.error) {
-                this.log.warn(`History for ${id} could not be read: ${res.error}`);
+                this.historyProblem(`History for ${id} could not be read: ${res.error}`);
                 return [];
+            }
+            if (this.historyFailing) {
+                this.historyFailing = false;
+                this.log.info(`${this.settings.historyInstance} can be read again`);
             }
             return (res?.result ?? [])
                 .filter(e => typeof e?.ts === 'number' && isReplayable(e.val))
                 .map(e => ({ ts: e.ts, val: e.val as ioBroker.StateValue }));
         } catch (e) {
-            this.log.warn(
+            this.historyProblem(
                 `History for ${id} could not be read from ${this.settings.historyInstance}: ${(e as Error).message}`,
             );
             return [];
+        }
+    }
+
+    /**
+     * Logs a history read failure once; repeats go to debug until a read succeeds again.
+     *
+     * @param text - the message
+     */
+    private historyProblem(text: string): void {
+        if (this.historyFailing) {
+            this.log.debug(text);
+        } else {
+            this.historyFailing = true;
+            this.log.warn(text);
         }
     }
 
@@ -485,6 +569,7 @@ class PresenceSimulation extends utils.Adapter {
         }
         this.timers.clear();
         this.pending = [];
+        this.lastAt.clear();
         if (this.refillTimer) {
             this.clearTimeout(this.refillTimer);
             this.refillTimer = undefined;

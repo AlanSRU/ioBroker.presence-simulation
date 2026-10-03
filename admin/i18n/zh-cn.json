@@ -1,5 +1,4 @@
 {
-    "presence-simulation adapter settings": "presence-simulation 适配器设置",
     "headerReplay": "重放",
     "historyInstance": "历史记录实例",
     "historyInstance_help": "记录下方状态的历史适配器（history、influxdb 或 sql）。",

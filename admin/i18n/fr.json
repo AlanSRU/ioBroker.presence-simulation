@@ -1,5 +1,4 @@
 {
-    "presence-simulation adapter settings": "Paramètres de l'adaptateur presence-simulation",
     "headerReplay": "Relecture",
     "historyInstance": "Instance d'historique",
     "historyInstance_help": "L'adaptateur d'historique qui enregistre les états ci-dessous (history, influxdb ou sql).",

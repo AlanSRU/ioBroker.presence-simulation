@@ -1,5 +1,4 @@
 {
-    "presence-simulation adapter settings": "Ustawienia adaptera presence-simulation",
     "headerReplay": "Odtwarzanie",
     "historyInstance": "Instancja historii",
     "historyInstance_help": "Adapter historii, który zapisuje poniższe stany (history, influxdb lub sql).",

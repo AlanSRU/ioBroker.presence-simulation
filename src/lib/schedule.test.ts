@@ -85,6 +85,27 @@ describe('schedule.planWindow', () => {
         expect(a[1].at - a[0].at).to.be.at.least(MIN_GAP_MS);
     });
 
+    it('keeps order across two windows when jitter pulls a change across the window edge', () => {
+        // ON recorded 14 min into window 1, OFF 16 min in (window 2). ON jittered +5 min, OFF -5 min.
+        const w = 15 * 60_000;
+        const on = { ts: T0 + 14 * 60_000, val: true };
+        const off = { ts: T0 + 16 * 60_000, val: false };
+        const first = planWindow('x', [on, off], T0, T0 + w, false, {
+            ...opts,
+            jitterMs: 300_000,
+            random: () => 0.999999,
+        });
+        const second = planWindow('x', [on, off], T0 + w, T0 + 2 * w, true, {
+            ...opts,
+            jitterMs: 300_000,
+            random: () => 0,
+            after: first[first.length - 1].at,
+        });
+        expect(first.map(x => x.val)).to.deep.equal([true]);
+        expect(second.map(x => x.val)).to.deep.equal([false]);
+        expect(second[0].at - first[0].at).to.be.at.least(MIN_GAP_MS);
+    });
+
     it('clamps actions that would fall in the past to notBefore', () => {
         const now = T0 + 7 * DAY + H;
         const [a] = planWindow('x', [{ ts: T0, val: true }], T0 - H, T0 + H, false, { ...opts, now });

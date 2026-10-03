@@ -33,7 +33,12 @@ Requires Node.js 22 or newer and js-controller 6.0.11 or newer.
 4. When the simulation stops, the saved values are restored (unless you turn that off).
 
 If ioBroker restarts while the simulation is active, it resumes and still restores the values
-saved at the original start.
+saved at the original start. If the automatic start state no longer means "away" when the
+adapter comes back (for example you got home while ioBroker was down), a simulation it started
+automatically is stopped and the saved values are restored.
+
+The automatic start reacts only to a real change between "away" and anything else. If you switch
+the simulation off while you are away, it stays off until you are home and away again.
 
 **This adapter writes states that belong to other adapters.** That is its purpose: it switches the
 lights and plugs you select, as commands (`ack: false`), in the same way the scenes adapter does.
@@ -47,6 +52,13 @@ open it in the **Objects** tab, select the wrench icon, and enable logging in yo
 instance. The adapter warns in the log about any selected state that is not being recorded.
 
 Replaying 7 days ago needs at least 7 days of recordings.
+
+Notes:
+
+- The replay uses a fixed number of 24-hour days. In the week after a daylight-saving change,
+  replayed changes are an hour earlier or later on the clock than the recorded ones.
+- On a trip longer than the chosen number of days, the adapter replays its own earlier replay,
+  so the random offsets add up a little over time.
 
 ## Configuration
 
@@ -68,6 +80,7 @@ Replaying 7 days ago needs at least 7 days of recordings.
 | `info.nextAction` | The next scheduled change. |
 | `info.lastAction` | The last change made. |
 | `info.savedStates` | The values saved at the start, restored when the simulation stops. |
+| `info.startedBy` | `trigger` or `manual`: what started the current simulation. |
 
 ## Changelog
 <!--
