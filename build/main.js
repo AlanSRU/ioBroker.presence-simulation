@@ -46,6 +46,8 @@ class PresenceSimulation extends utils.Adapter {
   triggerAway;
   /** Set while the history instance cannot be read, so the failure is logged once. */
   historyFailing = false;
+  /** Increases on every start and stop; a run's async steps stop when it no longer matches. */
+  run = 0;
   constructor(options = {}) {
     super({ ...options, name: "presence-simulation" });
     this.on("ready", this.onReady.bind(this));
@@ -53,7 +55,7 @@ class PresenceSimulation extends utils.Adapter {
     this.on("unload", this.onUnload.bind(this));
   }
   async onReady() {
-    var _a;
+    var _a, _b;
     this.settings = (0, import_config.readSettings)(this.config);
     await this.createObjects();
     if (this.unloaded) {
@@ -97,7 +99,10 @@ class PresenceSimulation extends utils.Adapter {
     } else {
       await this.setStatus("Idle");
     }
-    if (!this.running && this.triggerAway) {
+    const heldOff = ((_b = await this.getStateAsync("info.heldOff")) == null ? void 0 : _b.val) === true;
+    if (heldOff && !this.triggerAway) {
+      await this.setState("info.heldOff", false, true);
+    } else if (!this.running && this.triggerAway && !heldOff) {
       this.log.info(`${this.settings.triggerId} means away: starting the simulation`);
       await this.startSimulation(false, "trigger");
     }
@@ -246,6 +251,30 @@ class PresenceSimulation extends utils.Adapter {
       },
       native: {}
     });
+    await this.extendObject("info.heldOff", {
+      type: "state",
+      common: {
+        name: {
+          en: "Switched off while away (waits until home and away again)",
+          de: "W\xE4hrend der Abwesenheit ausgeschaltet (wartet bis zur n\xE4chsten Abwesenheit)",
+          ru: "\u0412\u044B\u043A\u043B\u044E\u0447\u0435\u043D\u043E \u0432\u043E \u0432\u0440\u0435\u043C\u044F \u043E\u0442\u0441\u0443\u0442\u0441\u0442\u0432\u0438\u044F (\u0436\u0434\u0451\u0442 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u0433\u043E \u0443\u0445\u043E\u0434\u0430)",
+          pt: "Desligado durante a aus\xEAncia (aguarda a pr\xF3xima aus\xEAncia)",
+          nl: "Uitgeschakeld tijdens afwezigheid (wacht op de volgende afwezigheid)",
+          fr: "Arr\xEAt\xE9 pendant l'absence (attend la prochaine absence)",
+          it: "Spento durante l'assenza (attende la prossima assenza)",
+          es: "Apagado durante la ausencia (espera a la pr\xF3xima ausencia)",
+          pl: "Wy\u0142\u0105czone podczas nieobecno\u015Bci (czeka na nast\u0119pn\u0105 nieobecno\u015B\u0107)",
+          uk: "\u0412\u0438\u043C\u043A\u043D\u0435\u043D\u043E \u043F\u0456\u0434 \u0447\u0430\u0441 \u0432\u0456\u0434\u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0456 (\u0447\u0435\u043A\u0430\u0454 \u043D\u0430\u0441\u0442\u0443\u043F\u043D\u043E\u0433\u043E \u0432\u0456\u0434'\u0457\u0437\u0434\u0443)",
+          "zh-cn": "\u79BB\u5BB6\u65F6\u5DF2\u5173\u95ED\uFF08\u7B49\u5F85\u4E0B\u6B21\u79BB\u5BB6\uFF09"
+        },
+        type: "boolean",
+        role: "indicator",
+        read: true,
+        write: false,
+        def: false
+      },
+      native: {}
+    });
   }
   async onStateChange(id, state) {
     if (!state || this.unloaded) {
@@ -256,22 +285,30 @@ class PresenceSimulation extends utils.Adapter {
         return;
       }
       if (state.val === true) {
+        await this.setState("info.heldOff", false, true);
         if (this.running) {
           await this.setState("active", true, true);
         } else {
           await this.startSimulation(false, "manual");
         }
       } else {
+        if (this.triggerAway) {
+          await this.setState("info.heldOff", true, true);
+        }
         await this.stopSimulation("switched off");
       }
       return;
     }
-    if (id === this.settings.triggerId && state.ack) {
+    const ownedByUser = id.startsWith("0_userdata.") || id.startsWith("javascript.");
+    if (id === this.settings.triggerId && (state.ack || ownedByUser)) {
       const away = (0, import_config.matchesTrigger)(state.val, this.settings.triggerValue);
       if (away === this.triggerAway) {
         return;
       }
       this.triggerAway = away;
+      if (!away) {
+        await this.setState("info.heldOff", false, true);
+      }
       if (away && !this.running) {
         this.log.info(`${id} changed to "${String(state.val)}": starting the simulation`);
         await this.startSimulation(false, "trigger");
@@ -296,6 +333,7 @@ class PresenceSimulation extends utils.Adapter {
       return;
     }
     this.running = true;
+    const run = ++this.run;
     await this.setState("active", true, true);
     await this.setState("info.startedBy", by, true);
     const saved = await this.getStateAsync("info.savedStates");
@@ -307,12 +345,12 @@ class PresenceSimulation extends utils.Adapter {
           snapshot[s.id] = st.val;
         }
       }
-      if (this.unloaded || !this.running) {
+      if (this.unloaded || run !== this.run) {
         return;
       }
       await this.setState("info.savedStates", JSON.stringify(snapshot), true);
     }
-    if (this.unloaded || !this.running) {
+    if (this.unloaded || run !== this.run) {
       return;
     }
     const recordedNow = Date.now() - this.settings.deltaMs;
@@ -321,24 +359,28 @@ class PresenceSimulation extends utils.Adapter {
     for (const s of this.settings.states) {
       const before = await this.history(s.id, { end: recordedNow, count: 1, returnNewestEntries: true });
       const val = (0, import_schedule.valueAt)(before, recordedNow);
-      if (val !== void 0 && this.running) {
+      if (val !== void 0 && run === this.run) {
         this.replaying.set(s.id, val);
         this.lastAt.set(s.id, Date.now());
         await this.write(s.id, val, "initial state");
       }
-      if (this.unloaded || !this.running) {
+      if (this.unloaded || run !== this.run) {
         return;
       }
     }
     this.cursor = recordedNow;
-    await this.planAhead();
+    await this.planAhead(run);
     this.log.info(
       `Simulation started: replaying ${this.settings.states.length} state(s) from ${this.settings.deltaMs / 864e5} day(s) ago`
     );
   }
-  /** Reads the next window of history, schedules it, and re-arms itself. */
-  async planAhead() {
-    if (!this.running || this.unloaded) {
+  /**
+   * Reads the next window of history, schedules it, and re-arms itself.
+   *
+   * @param run - the run this belongs to; a stop or restart in the meantime ends it
+   */
+  async planAhead(run) {
+    if (run !== this.run || this.unloaded) {
       return;
     }
     const now = Date.now();
@@ -347,7 +389,7 @@ class PresenceSimulation extends utils.Adapter {
     if (windowEnd > windowStart) {
       for (const s of this.settings.states) {
         const entries = await this.history(s.id, { start: windowStart, end: windowEnd });
-        if (!this.running || this.unloaded) {
+        if (run !== this.run || this.unloaded) {
           return;
         }
         let actions = (0, import_schedule.planWindow)(s.id, entries, windowStart, windowEnd, this.replaying.get(s.id), {
@@ -374,9 +416,12 @@ class PresenceSimulation extends utils.Adapter {
       this.cursor = windowEnd;
     }
     await this.updateStatus();
+    if (run !== this.run || this.unloaded) {
+      return;
+    }
     this.refillTimer = this.setTimeout(() => {
       this.refillTimer = void 0;
-      void this.planAhead();
+      void this.planAhead(run);
     }, REFILL_MS);
   }
   schedule(a) {
@@ -403,6 +448,7 @@ class PresenceSimulation extends utils.Adapter {
   async stopSimulation(reason) {
     const wasRunning = this.running;
     this.running = false;
+    this.run++;
     this.clearTimers();
     if (this.unloaded) {
       return;

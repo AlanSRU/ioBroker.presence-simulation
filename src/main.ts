@@ -34,6 +34,8 @@ class PresenceSimulation extends utils.Adapter {
     private triggerAway: boolean | undefined;
     /** Set while the history instance cannot be read, so the failure is logged once. */
     private historyFailing = false;
+    /** Increases on every start and stop; a run's async steps stop when it no longer matches. */
+    private run = 0;
 
     public constructor(options: Partial<utils.AdapterOptions> = {}) {
         super({ ...options, name: 'presence-simulation' });
@@ -91,7 +93,10 @@ class PresenceSimulation extends utils.Adapter {
             await this.setStatus('Idle');
         }
 
-        if (!this.running && this.triggerAway) {
+        const heldOff = (await this.getStateAsync('info.heldOff'))?.val === true;
+        if (heldOff && !this.triggerAway) {
+            await this.setState('info.heldOff', false, true); // home again: the next away starts it
+        } else if (!this.running && this.triggerAway && !heldOff) {
             this.log.info(`${this.settings.triggerId} means away: starting the simulation`);
             await this.startSimulation(false, 'trigger');
         }
@@ -253,6 +258,30 @@ class PresenceSimulation extends utils.Adapter {
             },
             native: {},
         });
+        await this.extendObject('info.heldOff', {
+            type: 'state',
+            common: {
+                name: {
+                    en: 'Switched off while away (waits until home and away again)',
+                    de: 'Während der Abwesenheit ausgeschaltet (wartet bis zur nächsten Abwesenheit)',
+                    ru: 'Выключено во время отсутствия (ждёт следующего ухода)',
+                    pt: 'Desligado durante a ausência (aguarda a próxima ausência)',
+                    nl: 'Uitgeschakeld tijdens afwezigheid (wacht op de volgende afwezigheid)',
+                    fr: "Arrêté pendant l'absence (attend la prochaine absence)",
+                    it: "Spento durante l'assenza (attende la prossima assenza)",
+                    es: 'Apagado durante la ausencia (espera a la próxima ausencia)',
+                    pl: 'Wyłączone podczas nieobecności (czeka na następną nieobecność)',
+                    uk: "Вимкнено під час відсутності (чекає наступного від'їзду)",
+                    'zh-cn': '离家时已关闭（等待下次离家）',
+                },
+                type: 'boolean',
+                role: 'indicator',
+                read: true,
+                write: false,
+                def: false,
+            },
+            native: {},
+        });
     }
 
     private async onStateChange(id: string, state: ioBroker.State | null | undefined): Promise<void> {
@@ -265,25 +294,34 @@ class PresenceSimulation extends utils.Adapter {
                 return;
             }
             if (state.val === true) {
+                await this.setState('info.heldOff', false, true);
                 if (this.running) {
                     await this.setState('active', true, true); // already running: just confirm
                 } else {
                     await this.startSimulation(false, 'manual');
                 }
             } else {
+                // Switched off while away: stay off, even across restarts, until home and away again.
+                if (this.triggerAway) {
+                    await this.setState('info.heldOff', true, true);
+                }
                 await this.stopSimulation('switched off');
             }
             return;
         }
-        // Foreign trigger: act on confirmed values (ack true) only, and only when away/home actually
-        // changes. Adapters re-write unchanged values on every poll; acting on those would restart a
-        // simulation the user has just switched off.
-        if (id === this.settings.triggerId && state.ack) {
+        // Trigger: only a real away/home change counts (adapters re-write unchanged values on every
+        // poll). Another adapter's state counts when confirmed (ack true); a user's own state
+        // (0_userdata, javascript) has no adapter to confirm it, so any write counts.
+        const ownedByUser = id.startsWith('0_userdata.') || id.startsWith('javascript.');
+        if (id === this.settings.triggerId && (state.ack || ownedByUser)) {
             const away = matchesTrigger(state.val, this.settings.triggerValue);
             if (away === this.triggerAway) {
                 return;
             }
             this.triggerAway = away;
+            if (!away) {
+                await this.setState('info.heldOff', false, true);
+            }
             if (away && !this.running) {
                 this.log.info(`${id} changed to "${String(state.val)}": starting the simulation`);
                 await this.startSimulation(false, 'trigger');
@@ -309,6 +347,7 @@ class PresenceSimulation extends utils.Adapter {
             return;
         }
         this.running = true;
+        const run = ++this.run;
         await this.setState('active', true, true);
         await this.setState('info.startedBy', by, true);
 
@@ -322,12 +361,12 @@ class PresenceSimulation extends utils.Adapter {
                 }
             }
             // A stop during the reads above must not leave a stale snapshot behind for a later restore.
-            if (this.unloaded || !this.running) {
+            if (this.unloaded || run !== this.run) {
                 return;
             }
             await this.setState('info.savedStates', JSON.stringify(snapshot), true);
         }
-        if (this.unloaded || !this.running) {
+        if (this.unloaded || run !== this.run) {
             return;
         }
 
@@ -338,25 +377,29 @@ class PresenceSimulation extends utils.Adapter {
         for (const s of this.settings.states) {
             const before = await this.history(s.id, { end: recordedNow, count: 1, returnNewestEntries: true });
             const val = valueAt(before, recordedNow);
-            if (val !== undefined && this.running) {
+            if (val !== undefined && run === this.run) {
                 this.replaying.set(s.id, val);
                 this.lastAt.set(s.id, Date.now());
                 await this.write(s.id, val, 'initial state');
             }
-            if (this.unloaded || !this.running) {
+            if (this.unloaded || run !== this.run) {
                 return;
             }
         }
         this.cursor = recordedNow;
-        await this.planAhead();
+        await this.planAhead(run);
         this.log.info(
             `Simulation started: replaying ${this.settings.states.length} state(s) from ${this.settings.deltaMs / 86400000} day(s) ago`,
         );
     }
 
-    /** Reads the next window of history, schedules it, and re-arms itself. */
-    private async planAhead(): Promise<void> {
-        if (!this.running || this.unloaded) {
+    /**
+     * Reads the next window of history, schedules it, and re-arms itself.
+     *
+     * @param run - the run this belongs to; a stop or restart in the meantime ends it
+     */
+    private async planAhead(run: number): Promise<void> {
+        if (run !== this.run || this.unloaded) {
             return;
         }
         const now = Date.now();
@@ -365,7 +408,7 @@ class PresenceSimulation extends utils.Adapter {
         if (windowEnd > windowStart) {
             for (const s of this.settings.states) {
                 const entries = await this.history(s.id, { start: windowStart, end: windowEnd });
-                if (!this.running || this.unloaded) {
+                if (run !== this.run || this.unloaded) {
                     return;
                 }
                 let actions = planWindow(s.id, entries, windowStart, windowEnd, this.replaying.get(s.id), {
@@ -392,10 +435,13 @@ class PresenceSimulation extends utils.Adapter {
             this.cursor = windowEnd;
         }
         await this.updateStatus();
+        if (run !== this.run || this.unloaded) {
+            return;
+        }
         // Re-arm at the end of the run, so a slow history read can never overlap the next one.
         this.refillTimer = this.setTimeout(() => {
             this.refillTimer = undefined;
-            void this.planAhead();
+            void this.planAhead(run);
         }, REFILL_MS);
     }
 
@@ -424,6 +470,7 @@ class PresenceSimulation extends utils.Adapter {
     private async stopSimulation(reason: string): Promise<void> {
         const wasRunning = this.running;
         this.running = false;
+        this.run++;
         this.clearTimers();
         if (this.unloaded) {
             return;

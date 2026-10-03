@@ -38,7 +38,10 @@ adapter comes back (for example you got home while ioBroker was down), a simulat
 automatically is stopped and the saved values are restored.
 
 The automatic start reacts only to a real change between "away" and anything else. If you switch
-the simulation off while you are away, it stays off until you are home and away again.
+the simulation off while you are away, it stays off until you are home and away again, also across
+restarts (`info.heldOff` shows this). A state that belongs to another adapter counts when that
+adapter confirms it (`ack: true`); your own states under `0_userdata.0` or `javascript.*` count
+whenever they are written.
 
 **This adapter writes states that belong to other adapters.** That is its purpose: it switches the
 lights and plugs you select, as commands (`ack: false`), in the same way the scenes adapter does.
@@ -81,6 +84,7 @@ Notes:
 | `info.lastAction` | The last change made. |
 | `info.savedStates` | The values saved at the start, restored when the simulation stops. |
 | `info.startedBy` | `trigger` or `manual`: what started the current simulation. |
+| `info.heldOff` | `true` after you switched the simulation off while away: it will not start again automatically until you are home and away again. |
 
 ## Changelog
 <!--
