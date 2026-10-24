@@ -54,6 +54,20 @@ export function isReplayable(val: unknown): val is ioBroker.StateValue {
     return typeof val === 'boolean' || typeof val === 'string' || (typeof val === 'number' && Number.isFinite(val));
 }
 
+/** How far back the start-up read looks for each state's value at the replayed moment. */
+export const START_LOOKBACK_MS = 7 * 24 * 3600_000;
+
+/**
+ * getHistory options for the start-up read: a window ending at `t`, newest entries kept.
+ * Not `{ end, count: 1 }`: history 5.0.1 answers that from the day's file without checking `end`,
+ * so it returns that day's last change even when it is after `t` (and valueAt then finds nothing).
+ *
+ * @param t - the recorded moment being replayed
+ */
+export function startQuery(t: number): { start: number; end: number; count: number; returnNewestEntries: boolean } {
+    return { start: t - START_LOOKBACK_MS, end: t, count: 2000, returnNewestEntries: true };
+}
+
 /**
  * The value a state had at time `t`: the newest entry at or before `t`.
  * Returns undefined when the history has nothing that old.

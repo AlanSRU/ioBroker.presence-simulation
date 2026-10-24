@@ -1,5 +1,13 @@
 import { expect } from 'chai';
-import { planWindow, valueAt, isReplayable, MIN_GAP_MS, type HistoryEntry } from './schedule';
+import {
+    planWindow,
+    valueAt,
+    isReplayable,
+    startQuery,
+    START_LOOKBACK_MS,
+    MIN_GAP_MS,
+    type HistoryEntry,
+} from './schedule';
 
 const H = 3600_000;
 const DAY = 24 * H;
@@ -25,6 +33,26 @@ describe('schedule.valueAt', () => {
     });
     it('keeps genuine zeros', () => {
         expect(valueAt([{ ts: T0, val: 0 }], T0)).to.equal(0);
+    });
+});
+
+describe('schedule.startQuery', () => {
+    it('asks for a window that ends at the replayed moment', () => {
+        const q = startQuery(T0);
+        expect(q.end).to.equal(T0);
+        expect(q.start).to.equal(T0 - START_LOOKBACK_MS);
+        expect(q.returnNewestEntries).to.equal(true);
+    });
+    it('finds the value at the moment when the answer also holds later changes (history 5.0.1)', () => {
+        // On 17 Oct the lamps were on 13:43–22:00; the simulation started at 18:57 recorded time.
+        const day = Date.UTC(2026, 9, 17);
+        const t = day + 18 * H + 57 * 60_000;
+        const answer: HistoryEntry[] = [
+            { ts: day + 22 * H, val: false },
+            { ts: day + 13 * H + 43 * 60_000, val: true },
+            { ts: day + 13 * H + 42 * 60_000, val: false },
+        ];
+        expect(valueAt(answer, t)).to.equal(true);
     });
 });
 

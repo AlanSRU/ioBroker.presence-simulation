@@ -7,7 +7,7 @@
 import * as utils from '@iobroker/adapter-core';
 import { readSettings, matchesTrigger, type Settings } from './lib/config';
 import { clock, dateTime } from './lib/format';
-import { planWindow, valueAt, isReplayable, type HistoryEntry, type PlannedAction } from './lib/schedule';
+import { planWindow, valueAt, isReplayable, startQuery, type HistoryEntry, type PlannedAction } from './lib/schedule';
 
 /** How far ahead (recorded time) each history read plans. */
 const LOOKAHEAD_MS = 15 * 60 * 1000;
@@ -375,7 +375,7 @@ class PresenceSimulation extends utils.Adapter {
         this.replaying.clear();
         this.lastAt.clear();
         for (const s of this.settings.states) {
-            const before = await this.history(s.id, { end: recordedNow, count: 1, returnNewestEntries: true });
+            const before = await this.history(s.id, startQuery(recordedNow));
             const val = valueAt(before, recordedNow);
             if (val !== undefined && run === this.run) {
                 this.replaying.set(s.id, val);

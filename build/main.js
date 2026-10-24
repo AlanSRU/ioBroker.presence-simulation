@@ -357,7 +357,7 @@ class PresenceSimulation extends utils.Adapter {
     this.replaying.clear();
     this.lastAt.clear();
     for (const s of this.settings.states) {
-      const before = await this.history(s.id, { end: recordedNow, count: 1, returnNewestEntries: true });
+      const before = await this.history(s.id, (0, import_schedule.startQuery)(recordedNow));
       const val = (0, import_schedule.valueAt)(before, recordedNow);
       if (val !== void 0 && run === this.run) {
         this.replaying.set(s.id, val);

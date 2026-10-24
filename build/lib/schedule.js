@@ -19,14 +19,20 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 var schedule_exports = {};
 __export(schedule_exports, {
   MIN_GAP_MS: () => MIN_GAP_MS,
+  START_LOOKBACK_MS: () => START_LOOKBACK_MS,
   isReplayable: () => isReplayable,
   planWindow: () => planWindow,
+  startQuery: () => startQuery,
   valueAt: () => valueAt
 });
 module.exports = __toCommonJS(schedule_exports);
 const MIN_GAP_MS = 1e3;
 function isReplayable(val) {
   return typeof val === "boolean" || typeof val === "string" || typeof val === "number" && Number.isFinite(val);
+}
+const START_LOOKBACK_MS = 7 * 24 * 36e5;
+function startQuery(t) {
+  return { start: t - START_LOOKBACK_MS, end: t, count: 2e3, returnNewestEntries: true };
 }
 function valueAt(entries, t) {
   let best;
@@ -60,8 +66,10 @@ function planWindow(id, entries, windowStart, windowEnd, lastValue, opts) {
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   MIN_GAP_MS,
+  START_LOOKBACK_MS,
   isReplayable,
   planWindow,
+  startQuery,
   valueAt
 });
 //# sourceMappingURL=schedule.js.map
