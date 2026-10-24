@@ -91,7 +91,7 @@ Notes:
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.0.3 (2026-10-24)
 * (Alan Paris) Fix: on start the states were not set to their value at the replayed moment when the history file of that day also held later changes (history 5.0.1 ignores `end` for a newest-entry read); the start-up read now asks for a window ending at that moment
 
 ### 0.0.2 (2026-10-04)

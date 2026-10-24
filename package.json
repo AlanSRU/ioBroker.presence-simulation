@@ -1,6 +1,6 @@
 {
   "name": "iobroker.presence-simulation",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Makes the house look lived-in while you are away by replaying how your lights and switches were used a week earlier, with a random offset.",
   "author": {
     "name": "Alan Paris",

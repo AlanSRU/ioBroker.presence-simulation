@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "presence-simulation",
-    "version": "0.0.2",
+    "version": "0.0.3",
     "news": {
+      "0.0.3": {
+        "en": "Fix: on start the states were not set to their value at the replayed moment when the history file of that day also held later changes (history 5.0.1 ignores `end` for a newest-entry read); the start-up read now asks for a window ending at that moment",
+        "de": "Fix: Beim Start wurden die Zustände nicht auf ihren Wert zum nachgespielten Zeitpunkt gesetzt, wenn die Verlaufsdatei dieses Tages auch spätere Änderungen enthielt (history 5.0.1 ignoriert `end` beim Lesen des neuesten Eintrags); der Start-Lesevorgang fragt jetzt ein Zeitfenster ab, das zu diesem Zeitpunkt endet",
+        "ru": "Исправлено: при запуске значения состояний не были установлены на момент воспроизведения, а в файле истории того дня также содержались последующие изменения (в истории 5.0.1 при чтении самой новой записи слово «конец» игнорируется); при стартовом чтении теперь запрашивается окно, заканчивающееся в этот момент",
+        "pt": "Correção: no início, o valor dos estados não era reproduzido quando o arquivo de histórico do dia também continha mudanças posteriores (o histórico 5.0.1 ignora `final` para ler a nova entrada); a leitura inicial agora pede que a janela termine",
+        "nl": "Opgelost: bij de start werden de toestanden niet op hun waarde op het nagespeelde moment gezet als het geschiedenisbestand van die dag ook latere wijzigingen bevatte (history 5.0.1 negeert `end` bij het lezen van de nieuwste invoer); bij de start wordt nu een tijdvenster opgevraagd dat op dat moment eindigt",
+        "fr": "Correctif : au début, les états n'étaient pas redéfinis à leur valeur au moment de la rediffusion, alors que le fichier d'historique du jour contenait des modifications ultérieures (history 5.0.1 ignore la « fin » lors de la lecture de la dernière entrée) ; le démarrage demande qu'une fenêtre se termine à ce moment-là",
+        "it": "Correzione: all'avvio gli stati non erano impostati al valore riprodotto, ma la cronologia di quel giorno conteneva anche le modifiche successive (la cronologia 5.0.1 ignora `end`); la lettura all'avvio chiede una finestra che termina in quel momento",
+        "es": "Solución: al principio, los estados no tenían su valor en el momento de la reproducción, ya que el historial de ese día también contenía cambios posteriores (el historial 5.0.1 ignora «final» para leer la entrada más reciente); la lectura inicial ahora pide una ventana que termine en ese momento",
+        "pl": "Poprawka: na początku stany nie były ustawione na wartość w momencie powtórzenia, gdy plik historii tego dnia również zawierał późniejsze zmiany (historia 5.0.1 ignoruje „koniec” dla odczytu najnowszego wpisu); odczyt startowy prosi teraz o okno zakończone w tym momencie",
+        "uk": "Виправлено: на початку стану не було встановлено значення на момент повторного відтворення, коли файл історії того дня також містив пізніші зміни (history 5.0.1 ігнорує `end` для читання останнього запису); початкове читання тепер запитує вікно, яке закінчується в цей момент",
+        "zh-cn": "修复：启动时状态未设置为重播时刻的值，当时当天的历史文件还保存了以后的更改（历史记录5.0.1忽略了最新的条目读取的 “结束”）；启动读取现在要求窗口在那一刻结束"
+      },
       "0.0.2": {
         "en": "initial release",
         "de": "erste Version",
